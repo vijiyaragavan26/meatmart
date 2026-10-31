@@ -1,0 +1,628 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  DELIVERY_PARTNER
+  ADMIN
+}
+
+enum OrderStatus {
+  ORDER_PLACED
+  PAYMENT_CONFIRMED
+  ORDER_ACCEPTED
+  PREPARING
+  PACKED
+  DELIVERY_PARTNER_ASSIGNED
+  PICKED_UP
+  OUT_FOR_DELIVERY
+  ARRIVING_SOON
+  DELIVERED
+  CANCELLED
+  REFUND_INITIATED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+  RAZORPAY
+  CASHFREE
+  UPI
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryAssignmentStatus {
+  OFFERED
+  ACCEPTED
+  REJECTED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+enum MeatType {
+  RAW
+  CLEANED
+  CURRY_CUT
+  BIRYANI_CUT
+  BONELESS
+  WHOLE
+  DRUMSTICK
+  NOT_APPLICABLE
+}
+
+model User {
+  id               String            @id @default(uuid())
+  phoneNumber      String            @unique
+  email            String?           @unique
+  fullName         String
+  passwordHash     String
+  role             Role              @default(CUSTOMER)
+  isActive         Boolean           @default(true)
+  avatarUrl        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  customerProfile  CustomerProfile?
+  deliveryPartner  DeliveryPartner?
+  orders           Order[]
+  carts            Cart[]
+  reviews          Review[]
+  notifications    Notification[]
+  supportTickets   SupportTicket[]
+  auditLogs        AuditLog[]
+  notificationPreference NotificationPreference?
+  otpRecords       OtpRecord[]
+  notificationLogs NotificationLog[]
+
+  @@index([phoneNumber])
+  @@index([role])
+}
+
+model CustomerProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alternatePhone   String?
+  preferredLanguage String           @default("ta") // ta or en
+  walletBalance    Decimal           @default(0.0) @db.Decimal(10, 2)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  addresses        CustomerAddress[]
+  couponRedemptions CouponRedemption[]
+}
+
+model CustomerAddress {
+  id               String            @id @default(uuid())
+  customerProfileId String
+  customerProfile  CustomerProfile   @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  addressLabel     String            @default("Home") // Home, Work, Other
+  recipientName    String
+  recipientPhone   String
+  flatHouseNo      String
+  streetAddress    String
+  landmark         String?
+  area             String            // e.g., Kanjikovil, Perundurai
+  city             String            @default("Erode")
+  state            String            @default("Tamil Nadu")
+  pincode          String            // e.g., 638116
+  latitude         Decimal?          @db.Decimal(10, 7)
+  longitude        Decimal?          @db.Decimal(10, 7)
+  isDefault        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  orders           Order[]
+
+  @@index([customerProfileId])
+  @@index([pincode])
+}
+
+model DeliveryPartner {
+  id               String            @id @default(uuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleType      String            // Bike, Scooter
+  vehicleNumber    String
+  drivingLicenseNo String?
+  isVerified       Boolean           @default(false)
+  isOnline         Boolean           @default(false)
+  currentLatitude  Decimal?          @db.Decimal(10, 7)
+  currentLongitude Decimal?          @db.Decimal(10, 7)
+  lastLocationUpdate DateTime?
+  totalEarnings    Decimal           @default(0.0) @db.Decimal(10, 2)
+  rating           Decimal           @default(5.0) @db.Decimal(3, 2)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  assignments      DeliveryAssignment[]
+  locations        DeliveryLocation[]
+
+  @@index([isOnline])
+  @@index([isVerified])
+}
+
+model ProductCategory {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  slug             String            @unique
+  description      String?
+  imageUrl         String?
+  displayOrder     Int               @default(0)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  products         Product[]
+}
+
+model Brand {
+  id               String            @id @default(uuid())
+  name             String            @unique // e.g., Sakthi Masala, MeatMart Fresh
+  slug             String            @unique
+  logoUrl          String?
+  description      String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  products         Product[]
+}
+
+model Product {
+  id                  String          @id @default(uuid())
+  name                String
+  slug                String          @unique
+  categoryId          String
+  category            ProductCategory @relation(fields: [categoryId], references: [id])
+  brandId             String?
+  brand               Brand?          @relation(fields: [brandId], references: [id])
+  shortDescription    String?
+  description         String
+  price               Decimal         @db.Decimal(10, 2)
+  mrp                 Decimal         @db.Decimal(10, 2)
+  unit                String          // kg, 500g, 250g, packet, piece, dozen
+  netWeightGrams      Int?            // e.g. 500, 1000
+  meatType            MeatType        @default(NOT_APPLICABLE)
+  isPackaged          Boolean         @default(false)
+  ingredients         String?
+  allergens           String?
+  storageInstructions String?
+  manufacturerName    String?
+  batchNumber         String?
+  expiryDate          DateTime?
+  isAvailable         Boolean         @default(true)
+  isFeatured          Boolean         @default(false)
+  isBestSeller        Boolean         @default(false)
+  averageRating       Decimal         @default(5.0) @db.Decimal(3, 2)
+  totalReviews        Int             @default(0)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  images              ProductImage[]
+  inventory           Inventory?
+  cartItems           CartItem[]
+  orderItems          OrderItem[]
+  reviews             Review[]
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([isAvailable])
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  altText   String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model Inventory {
+  id              String   @id @default(uuid())
+  productId       String   @unique
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currentStock    Int      @default(0)
+  lowStockAlert   Int      @default(5)
+  lastRestockedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  selectedWeight String? // e.g. "500g", "1kg"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Order {
+  id               String            @id @default(uuid())
+  orderNumber      String            @unique // e.g. MM-202610-001
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  deliveryAddressId String
+  deliveryAddress  CustomerAddress   @relation(fields: [deliveryAddressId], references: [id])
+  status           OrderStatus       @default(ORDER_PLACED)
+  paymentMethod    PaymentMethod     @default(COD)
+  paymentStatus    PaymentStatus     @default(PENDING)
+  itemTotal        Decimal           @db.Decimal(10, 2)
+  deliveryFee      Decimal           @db.Decimal(10, 2)
+  discountAmount   Decimal           @default(0.0) @db.Decimal(10, 2)
+  taxAmount        Decimal           @default(0.0) @db.Decimal(10, 2)
+  totalAmount      Decimal           @db.Decimal(10, 2)
+  deliverySlot     String?           // e.g., "Today 7:00 AM - 9:00 AM"
+  deliveryDistanceKm Decimal?        @db.Decimal(5, 2)
+  specialNotes     String?
+  cancellationReason String?
+  proofOfDeliveryOtp String?         // 4-digit code given to customer
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  items            OrderItem[]
+  payments         Payment[]
+  refunds          Refund[]
+  deliveryAssignments DeliveryAssignment[]
+  statusHistory    OrderStatusHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  productName    String   // Snapshot
+  productBrand   String?  // Snapshot
+  productUnit    String   // Snapshot
+  unitPrice      Decimal  @db.Decimal(10, 2) // Snapshot
+  quantity       Int
+  totalPrice     Decimal  @db.Decimal(10, 2)
+  selectedWeight String?
+  createdAt      DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gateway           String        // RAZORPAY, CASHFREE, COD
+  gatewayOrderId    String?       // order_xyz
+  gatewayPaymentId  String?       // pay_xyz
+  gatewaySignature  String?
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  rawResponse       String?       @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([gatewayOrderId])
+}
+
+model Refund {
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refundAmount   Decimal  @db.Decimal(10, 2)
+  reason         String
+  gatewayRefundId String?
+  status         String   @default("INITIATED")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orderId])
+}
+
+model DeliveryAssignment {
+  id                String                   @id @default(uuid())
+  orderId           String
+  order             Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryPartnerId String
+  deliveryPartner   DeliveryPartner          @relation(fields: [deliveryPartnerId], references: [id])
+  status            DeliveryAssignmentStatus @default(OFFERED)
+  assignedAt        DateTime                 @default(now())
+  acceptedAt        DateTime?
+  pickedUpAt        DateTime?
+  deliveredAt       DateTime?
+  distanceCoveredKm Decimal?                 @db.Decimal(5, 2)
+  partnerPayout     Decimal                  @default(0.0) @db.Decimal(10, 2)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([orderId])
+  @@index([deliveryPartnerId])
+  @@index([status])
+}
+
+model DeliveryLocation {
+  id                String          @id @default(uuid())
+  deliveryPartnerId String
+  deliveryPartner   DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id], onDelete: Cascade)
+  orderId           String?
+  latitude          Decimal         @db.Decimal(10, 7)
+  longitude         Decimal         @db.Decimal(10, 7)
+  heading           Decimal?        @db.Decimal(5, 2)
+  speed             Decimal?        @db.Decimal(5, 2)
+  accuracy          Decimal?        @db.Decimal(5, 2)
+  recordedAt        DateTime        @default(now())
+
+  @@index([deliveryPartnerId])
+  @@index([orderId])
+  @@index([recordedAt])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  comment   String?
+  changedBy String?     // User ID or SYSTEM
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model DeliveryZone {
+  id             String   @id @default(uuid())
+  name           String   // e.g., "Kanjikovil Core", "Perundurai Outskirts"
+  pincode        String   // e.g., "638116"
+  baseDistanceKm Decimal  @db.Decimal(5, 2) // Max distance covered in base rate
+  baseFee        Decimal  @db.Decimal(10, 2) // Base fee in INR
+  perKmFeeAbove  Decimal  @db.Decimal(10, 2) // Additional fee per km
+  minOrderValue  Decimal  @default(150.0) @db.Decimal(10, 2)
+  maxDistanceKm  Decimal  @default(15.0) @db.Decimal(5, 2)
+  freeDeliveryThreshold Decimal @default(500.0) @db.Decimal(10, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([pincode])
+  @@index([isActive])
+}
+
+model DeliverySlot {
+  id        String   @id @default(uuid())
+  slotName  String   // e.g. "Morning Early", "Morning Standard", "Evening"
+  startTime String   // "07:00"
+  endTime   String   // "09:30"
+  maxOrders Int      @default(30)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique // e.g., "MEATFIRST", "FRESH50"
+  description    String
+  discountType   String    // PERCENTAGE or FIXED
+  discountValue  Decimal   @db.Decimal(10, 2)
+  minOrderValue  Decimal   @default(0.0) @db.Decimal(10, 2)
+  maxDiscount    Decimal?  @db.Decimal(10, 2)
+  usageLimit     Int?      // Global usage limit
+  perUserLimit   Int       @default(1)
+  timesUsed      Int       @default(0)
+  validFrom      DateTime  @default(now())
+  validUntil     DateTime
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  redemptions    CouponRedemption[]
+
+  @@index([code])
+}
+
+model CouponRedemption {
+  id                String          @id @default(uuid())
+  couponId          String
+  coupon            Coupon          @relation(fields: [couponId], references: [id])
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id])
+  orderId           String?
+  discountApplied   Decimal         @db.Decimal(10, 2)
+  redeemedAt        DateTime        @default(now())
+
+  @@index([couponId])
+  @@index([customerProfileId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int      // 1 to 5
+  comment   String?
+  isVerifiedPurchase Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // ORDER_UPDATE, DELIVERY_ASSIGNMENT, PROMO
+  dataJson  String?  // JSON string
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  orderId     String?
+  subject     String
+  description String
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority    String   @default("MEDIUM")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model StoreSettings {
+  id                  String   @id @default(uuid())
+  storeName           String   @default("MeatMart Fresh Meats & Masalas")
+  storeAddress        String   @default("Main Road, Kanjikovil, Erode District, Tamil Nadu 638116")
+  storePhone          String   @default("+91 98427 12345")
+  storeEmail          String   @default("support@meatmartkanjikovil.in")
+  storeLatitude       Decimal  @default(11.3934) @db.Decimal(10, 7)
+  storeLongitude      Decimal  @default(77.6044) @db.Decimal(10, 7)
+  openingTime         String   @default("06:30")
+  closingTime         String   @default("21:00")
+  isStoreOpen         Boolean  @default(true)
+  allowCod            Boolean  @default(true)
+  taxRatePercent      Decimal  @default(0.0) @db.Decimal(5, 2)
+  minOrderValue       Decimal  @default(150.0) @db.Decimal(10, 2)
+  freeDeliveryAbove   Decimal  @default(500.0) @db.Decimal(10, 2)
+  maxDeliveryRadiusKm Decimal  @default(15.0) @db.Decimal(5, 2)
+  updatedAt           DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   // e.g. "PRODUCT_UPDATE", "ORDER_STATUS_OVERRIDE"
+  targetType String   // "PRODUCT", "ORDER", "USER"
+  targetId   String?
+  details    String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
+
+model NotificationPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappOrderUpdates Boolean  @default(true)
+  whatsappPromos       Boolean  @default(false)
+  emailReceipts        Boolean  @default(true)
+  emailPromos          Boolean  @default(false)
+  smsAlerts            Boolean  @default(true)
+  isEmailVerified      Boolean  @default(false)
+  isPhoneVerified      Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model OtpRecord {
+  id                  String   @id @default(uuid())
+  userId              String?
+  user                User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target              String   // phone number (+91...) or email
+  type                String   // "MOBILE" or "EMAIL"
+  purpose             String   // "LOGIN", "REGISTER", "PASSWORD_RESET", "VERIFY_EMAIL"
+  hashedOtp           String
+  salt                String
+  attempts            Int      @default(0)
+  isUsed              Boolean  @default(false)
+  expiresAt           DateTime
+  resendCooldownUntil DateTime
+  createdAt           DateTime @default(now())
+
+  @@index([target])
+  @@index([type])
+  @@index([isUsed])
+}
+
+model NotificationLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId    String?
+  channel    String   // "WHATSAPP", "EMAIL", "SMS", "SOCKET"
+  eventType  String   // "OTP", "ORDER_CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED", etc.
+  recipient  String   // phone number or email address
+  status     String   // "SENT", "DELIVERED", "READ", "FAILED", "SIMULATED"
+  templateId String?
+  payload    String?  @db.Text
+  error      String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([channel])
+  @@index([status])
+}
+
+model WebhookLog {
+  id        String   @id @default(uuid())
+  provider  String   // "WHATSAPP", "GMAIL", "SENDGRID"
+  eventType String?
+  payload   String   @db.Text
+  headers   String?  @db.Text
+  status    String   @default("PROCESSED")
+  createdAt DateTime @default(now())
+
+  @@index([provider])
+  @@index([createdAt])
+}
+

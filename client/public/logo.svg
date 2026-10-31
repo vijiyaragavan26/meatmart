@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bagGrad" x1="64" y1="120" x2="448" y2="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D32F2F"/>
+      <stop offset="100%" stop-color="#C62828"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="320" y1="40" x2="420" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#2E7D32"/>
+    </linearGradient>
+  </defs>
+  <!-- Shopping Bag Handle -->
+  <path d="M176 170V120C176 75.8 211.8 40 256 40C300.2 40 336 75.8 336 120V170" stroke="#C62828" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Shopping Bag Body -->
+  <rect x="76" y="160" width="360" height="312" rx="44" fill="url(#bagGrad)"/>
+  <!-- Bag Fold Accent Shadow -->
+  <path d="M76 190C120 210 392 210 436 190" stroke="#B71C1C" stroke-width="12" stroke-linecap="round"/>
+  <!-- Fresh Meat & Bone Silhouette Inside Bag -->
+  <path d="M256 240C220 240 190 268 190 304C190 336 214 360 242 368L220 404C216 410 220 418 228 418H284C292 418 296 410 292 404L270 368C298 360 322 336 322 304C322 268 292 240 256 240Z" fill="#FFF8F0"/>
+  <!-- Bone Marrow circle -->
+  <circle cx="256" cy="295" r="18" fill="#C62828"/>
+  <!-- Fresh Green Herb / Leaf Accent on Top Right -->
+  <path d="M370 60C370 60 430 70 430 130C370 130 360 70 370 60Z" fill="url(#leafGrad)"/>
+  <path d="M370 130C370 130 330 160 340 200C380 190 390 140 370 130Z" fill="#2E7D32"/>
+</svg>
