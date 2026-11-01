@@ -10,9 +10,18 @@ import {
   createInitialUsers,
 } from './initialData';
 
-export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
-});
+let prismaInstance: any = null;
+try {
+  if (process.env.DATABASE_URL) {
+    prismaInstance = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    });
+  }
+} catch (e) {
+  console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
+}
+
+export const prisma = prismaInstance;
 
 export let isPostgresConnected = false;
 

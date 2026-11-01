@@ -4,9 +4,18 @@ exports.memDb = exports.MemoryDatabase = exports.isPostgresConnected = exports.p
 exports.connectDatabase = connectDatabase;
 const client_1 = require("@prisma/client");
 const initialData_1 = require("./initialData");
-exports.prisma = new client_1.PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
-});
+let prismaInstance = null;
+try {
+    if (process.env.DATABASE_URL) {
+        prismaInstance = new client_1.PrismaClient({
+            log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+        });
+    }
+}
+catch (e) {
+    console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
+}
+exports.prisma = prismaInstance;
 exports.isPostgresConnected = false;
 // In-Memory Database Store for robust local zero-setup operation
 class MemoryDatabase {

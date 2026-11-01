@@ -32,26 +32,38 @@ exports.app.use(express_1.default.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'test') {
     exports.app.use((0, morgan_1.default)('dev'));
 }
-// Health check endpoint
-exports.app.get('/api/health', (req, res) => {
+const healthHandler = (req, res) => {
     res.json({
         status: 'online',
         store: 'MeatMart Fresh Meats & Masalas',
         location: 'Kanjikovil, Erode, Tamil Nadu',
         timestamp: new Date().toISOString(),
     });
-});
-// REST API Routes
+};
+// Health check endpoint (both /api/health and /health)
+exports.app.get('/api/health', healthHandler);
+exports.app.get('/health', healthHandler);
+// REST API Routes (mounted on both /api/* and /* for compatibility with all hosting environments)
 exports.app.get('/api/categories', productController_1.getCategories);
+exports.app.get('/categories', productController_1.getCategories);
 exports.app.get('/api/brands', productController_1.getBrands);
+exports.app.get('/brands', productController_1.getBrands);
 exports.app.use('/api/auth', authRoutes_1.default);
+exports.app.use('/auth', authRoutes_1.default);
 exports.app.use('/api/products', productRoutes_1.default);
+exports.app.use('/products', productRoutes_1.default);
 exports.app.use('/api/orders', orderRoutes_1.default);
+exports.app.use('/orders', orderRoutes_1.default);
 exports.app.use('/api/delivery', deliveryRoutes_1.default);
+exports.app.use('/delivery', deliveryRoutes_1.default);
 exports.app.use('/api/admin', adminRoutes_1.default);
+exports.app.use('/admin', adminRoutes_1.default);
 exports.app.use('/api/payments', paymentRoutes_1.default);
+exports.app.use('/payments', paymentRoutes_1.default);
 exports.app.use('/api/notifications', notificationRoutes_1.default);
+exports.app.use('/notifications', notificationRoutes_1.default);
 exports.app.use('/api/webhooks', webhookRoutes_1.default);
+exports.app.use('/webhooks', webhookRoutes_1.default);
 // Serve client production build so port 5000 also serves the full UI
 const clientDistPath = path_1.default.resolve(__dirname, '../../client/dist');
 exports.app.use(express_1.default.static(clientDistPath));

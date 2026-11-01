@@ -33,27 +33,48 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
+const healthHandler = (req: Request, res: Response) => {
   res.json({
     status: 'online',
     store: 'MeatMart Fresh Meats & Masalas',
     location: 'Kanjikovil, Erode, Tamil Nadu',
     timestamp: new Date().toISOString(),
   });
-});
+};
 
-// REST API Routes
+// Health check endpoint (both /api/health and /health)
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
+
+// REST API Routes (mounted on both /api/* and /* for compatibility with all hosting environments)
 app.get('/api/categories', getCategories);
+app.get('/categories', getCategories);
 app.get('/api/brands', getBrands);
+app.get('/brands', getBrands);
+
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/products', productRoutes);
+app.use('/products', productRoutes);
+
 app.use('/api/orders', orderRoutes);
+app.use('/orders', orderRoutes);
+
 app.use('/api/delivery', deliveryRoutes);
+app.use('/delivery', deliveryRoutes);
+
 app.use('/api/admin', adminRoutes);
+app.use('/admin', adminRoutes);
+
 app.use('/api/payments', paymentRoutes);
+app.use('/payments', paymentRoutes);
+
 app.use('/api/notifications', notificationRoutes);
+app.use('/notifications', notificationRoutes);
+
 app.use('/api/webhooks', webhookRoutes);
+app.use('/webhooks', webhookRoutes);
 
 // Serve client production build so port 5000 also serves the full UI
 const clientDistPath = path.resolve(__dirname, '../../client/dist');

@@ -3,15 +3,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.app = void 0;
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const app_1 = require("./app");
+Object.defineProperty(exports, "app", { enumerable: true, get: function () { return app_1.app; } });
 const db_1 = require("./config/db");
 const trackingSocket_1 = require("./sockets/trackingSocket");
 const socketInstance_1 = require("./sockets/socketInstance");
 const PORT = process.env.PORT || 5000;
-async function startServer() {
-    await (0, db_1.connectDatabase)();
+// Always immediately initialize in-memory database store so serverless cold starts have instant data
+db_1.memDb.initialize().catch((err) => {
+    console.error('[Database] Memory store initialization error:', err);
+});
+// Attempt PostgreSQL connection if DATABASE_URL is configured
+if (process.env.DATABASE_URL) {
+    (0, db_1.connectDatabase)().catch((err) => {
+        console.warn('[Database] Background Postgres connection warning:', err?.message || err);
+    });
+}
+// In standard Node.js server environments, start HTTP & Socket.IO server
+if (!process.env.VERCEL) {
     const server = http_1.default.createServer(app_1.app);
     const io = new socket_io_1.Server(server, {
         cors: {
@@ -30,6 +42,4 @@ async function startServer() {
         console.log(`=======================================================`);
     });
 }
-startServer().catch(err => {
-    console.error('Fatal Server Startup Error:', err);
-});
+exports.default = app_1.app;
