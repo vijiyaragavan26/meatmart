@@ -19,29 +19,28 @@ if (process.env.DATABASE_URL) {
   });
 }
 
-// In standard Node.js server environments, start HTTP & Socket.IO server
-if (!process.env.VERCEL) {
-  const server = http.createServer(app);
+// Initialize HTTP & Socket.IO server
+const server = http.createServer(app);
 
-  const io = new Server(server, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST', 'PATCH'],
-    },
-  });
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH'],
+  },
+});
 
-  setSocketIO(io);
-  setupTrackingSockets(io);
+setSocketIO(io);
+setupTrackingSockets(io);
 
-  server.listen(Number(PORT), () => {
-    console.log(`=======================================================`);
-    console.log(`🥩 MeatMart Backend Server running on port ${PORT}`);
-    console.log(`📍 Business Location: Kanjikovil, Erode, Tamil Nadu`);
-    console.log(`📡 Socket.IO Real-time Tracking Ready`);
-    console.log(`🔗 API Base: http://localhost:${PORT}/api`);
-    console.log(`=======================================================`);
-  });
-}
+// Bind to designated PORT on 0.0.0.0 for Vercel Services, cloud hosting, and local dev
+server.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`=======================================================`);
+  console.log(`🥩 MeatMart Backend Server running on port ${PORT}`);
+  console.log(`📍 Business Location: Kanjikovil, Erode, Tamil Nadu`);
+  console.log(`📡 Socket.IO Real-time Tracking Ready`);
+  console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+  console.log(`=======================================================`);
+});
 
 export default app;
-export { app };
+export { app, server };

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.app = void 0;
+exports.server = exports.app = void 0;
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const app_1 = require("./app");
@@ -22,24 +22,24 @@ if (process.env.DATABASE_URL) {
         console.warn('[Database] Background Postgres connection warning:', err?.message || err);
     });
 }
-// In standard Node.js server environments, start HTTP & Socket.IO server
-if (!process.env.VERCEL) {
-    const server = http_1.default.createServer(app_1.app);
-    const io = new socket_io_1.Server(server, {
-        cors: {
-            origin: '*',
-            methods: ['GET', 'POST', 'PATCH'],
-        },
-    });
-    (0, socketInstance_1.setSocketIO)(io);
-    (0, trackingSocket_1.setupTrackingSockets)(io);
-    server.listen(Number(PORT), () => {
-        console.log(`=======================================================`);
-        console.log(`🥩 MeatMart Backend Server running on port ${PORT}`);
-        console.log(`📍 Business Location: Kanjikovil, Erode, Tamil Nadu`);
-        console.log(`📡 Socket.IO Real-time Tracking Ready`);
-        console.log(`🔗 API Base: http://localhost:${PORT}/api`);
-        console.log(`=======================================================`);
-    });
-}
+// Initialize HTTP & Socket.IO server
+const server = http_1.default.createServer(app_1.app);
+exports.server = server;
+const io = new socket_io_1.Server(server, {
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'PATCH'],
+    },
+});
+(0, socketInstance_1.setSocketIO)(io);
+(0, trackingSocket_1.setupTrackingSockets)(io);
+// Bind to designated PORT on 0.0.0.0 for Vercel Services, cloud hosting, and local dev
+server.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`=======================================================`);
+    console.log(`🥩 MeatMart Backend Server running on port ${PORT}`);
+    console.log(`📍 Business Location: Kanjikovil, Erode, Tamil Nadu`);
+    console.log(`📡 Socket.IO Real-time Tracking Ready`);
+    console.log(`🔗 API Base: http://localhost:${PORT}/api`);
+    console.log(`=======================================================`);
+});
 exports.default = app_1.app;
