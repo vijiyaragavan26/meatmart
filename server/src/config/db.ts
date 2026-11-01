@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import {
   initialCategories,
   initialBrands,
@@ -11,14 +10,16 @@ import {
 } from './initialData';
 
 let prismaInstance: any = null;
-try {
-  if (process.env.DATABASE_URL) {
+if (process.env.DATABASE_URL) {
+  try {
+    // Dynamically load Prisma only when DATABASE_URL is configured
+    const { PrismaClient } = require('@prisma/client');
     prismaInstance = new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
+  } catch (e) {
+    console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
   }
-} catch (e) {
-  console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
 }
 
 export const prisma = prismaInstance;

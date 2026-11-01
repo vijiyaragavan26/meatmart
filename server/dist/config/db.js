@@ -2,18 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.memDb = exports.MemoryDatabase = exports.isPostgresConnected = exports.prisma = void 0;
 exports.connectDatabase = connectDatabase;
-const client_1 = require("@prisma/client");
 const initialData_1 = require("./initialData");
 let prismaInstance = null;
-try {
-    if (process.env.DATABASE_URL) {
-        prismaInstance = new client_1.PrismaClient({
+if (process.env.DATABASE_URL) {
+    try {
+        // Dynamically load Prisma only when DATABASE_URL is configured
+        const { PrismaClient } = require('@prisma/client');
+        prismaInstance = new PrismaClient({
             log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
         });
     }
-}
-catch (e) {
-    console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
+    catch (e) {
+        console.warn('PrismaClient init skipped, using resilient In-Memory Database store:', e);
+    }
 }
 exports.prisma = prismaInstance;
 exports.isPostgresConnected = false;
